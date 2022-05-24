@@ -9,57 +9,34 @@ import java.util.*;
 public class BooleanSearchEngine implements SearchEngine {
     HashMap<String, List<PageEntry>> pageEntryHashMap = new HashMap<>();
 
-    public BooleanSearchEngine(File pdfsDir) {
-        if (pdfsDir.isDirectory()) {
-            File[] files = pdfsDir.listFiles();
-            if (files != null) {
-                for (File item : files) {
-                    try (PdfReader pdfReader = new PdfReader(item)) {
-                        PdfDocument doc = new PdfDocument(pdfReader);
-                        int length = doc.getNumberOfPages();
-                        for (int i = 1; i < length; i++) {
-                            var page = doc.getPage(i);
-                            var text = PdfTextExtractor.getTextFromPage(page);
-                            var words = text.split("\\P{IsAlphabetic}+");
-                            Map<String, Integer> countWords = countingNumberWords(words);
-                            for (String word : words) {
-                                if (word.equals("")) {
-                                    continue;
-                                }
-                                PageEntry pageEntry =
-                                        new PageEntry(item.getName(), i, countWords.get(word.toLowerCase()));
-                                List<PageEntry> listPage;
-                                if (pageEntryHashMap.get(word) == null) {
-                                    listPage = new ArrayList<>();
-                                    listPage.add(pageEntry);
-                                } else {
-                                    listPage = pageEntryHashMap.get(word);
-                                    if (!(listPage.contains(pageEntry))) {
-                                        listPage.add(pageEntry);
-                                    }
-                                }
-                                Collections.sort(listPage);
-                                pageEntryHashMap.put(word, listPage);
-                            }
-                        }
-                    } catch (IOException exception) {
-                        exception.printStackTrace();
+    public BooleanSearchEngine(File pdfsDir) throws IOException, NullPointerException {
+        for (File pdf : Objects.requireNonNull(pdfsDir.listFiles(), "Указан неверный путь к файлам")) {
+            PdfDocument doc = new PdfDocument(new PdfReader(pdf));
+            for (int i = 0; i < doc.getNumberOfPages(); i++) {
+                int currentPage = i + 1;
+                String text = PdfTextExtractor.getTextFromPage(doc.getPage(currentPage));
+                String[] words = text.split("\\P{IsAlphabetic}+");
+                Map<String, Integer> wordFrequency = new HashMap<>();
+                for (var word : words) {
+                    if (word.isEmpty()) {
+                        continue;
                     }
+                    wordFrequency.put(word.toLowerCase(), wordFrequency.getOrDefault(word, 0) + 1);
+                }
+
+                for (var entry : wordFrequency.entrySet()) {
+                    List<PageEntry> wordSearchingResult;
+                    if (pageEntryHashMap.containsKey(entry.getKey())) {
+                        wordSearchingResult = pageEntryHashMap.get(entry.getKey());
+                    } else {
+                        wordSearchingResult = new ArrayList<>();
+                    }
+                    wordSearchingResult.add(new PageEntry(pdf.getName(), currentPage, entry.getValue()));
+                    Collections.sort(wordSearchingResult, Collections.reverseOrder());
+                    pageEntryHashMap.put(entry.getKey(), wordSearchingResult);
                 }
             }
         }
-    }
-
-    private Map<String, Integer> countingNumberWords(String[] words) {
-        Map<String, Integer> mapWordNum = new HashMap<>();
-        for (var word : words) {
-            if (word.isEmpty()) {
-                continue;
-            }
-            int num = mapWordNum.getOrDefault(word.toLowerCase(), 0) + 1;
-            mapWordNum.put(word.toLowerCase(), num);
-        }
-        return mapWordNum;
     }
 
     @Override
