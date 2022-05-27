@@ -11,7 +11,7 @@ import java.util.List;
 public class Main {
     public static void main(String[] args) {
         try {
-            BooleanSearchEngine engine = new BooleanSearchEngine(new File("pcs-jd-diplom//pdfs"));
+            BooleanSearchEngine engine = new BooleanSearchEngine(new File("pdfs"));
             int port = 8989;
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 System.out.println("Сервер запущен");
